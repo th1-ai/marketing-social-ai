@@ -1,0 +1,27 @@
+{
+  "type": "object",
+  "properties": {
+    "reply_markdown": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "suggested_suggestion": {
+      "type": ["object", "null"],
+      "properties": {
+        "title": {"type": "string"},
+        "category": {
+          "type": "string",
+          "enum": ["headline_test", "review_ad", "budget_shift", "new_creative",
+                   "cross_property", "landing_page"]
+        },
+        "rationale": {"type": "string"},
+        "impact": {"type": "string"}
+      },
+      "required": ["title", "category", "rationale"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["reply_markdown"],
+  "additionalProperties": false
+}

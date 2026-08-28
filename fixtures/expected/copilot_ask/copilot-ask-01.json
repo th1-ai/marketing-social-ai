@@ -1,0 +1,9 @@
+{
+  "reply_markdown": "Put more money behind the wine dinners ad. It returns 8.8x on just €20/day, well inside the 7x scale-up line, while the breakfast terrace ad is running at 0.7x and losing money. Scaling wine dinners and pausing breakfast terrace both fall out of the budget desk's rules on the next run.",
+  "suggested_suggestion": {
+    "title": "Scale the wine dinners ad",
+    "category": "budget_shift",
+    "rationale": "8.8x ROAS on a EUR 20/day budget is well inside the scale-up threshold and has room to grow.",
+    "impact": "aurora-wine-dinners — ROAS 8.8"
+  }
+}

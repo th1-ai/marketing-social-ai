@@ -1,0 +1,99 @@
+# ---------------------------------------------------------------------------
+# agent.yaml - Marketing & Social AI's own knobs. `make setup` copies this to
+# config/agent.yaml; edit that copy, this example stays as a clean reference.
+# ---------------------------------------------------------------------------
+
+# Your properties. The key is what this repo calls each one everywhere
+# (fixtures, exports, the review queue). One property is fine - list is only
+# for a portfolio, which is what unlocks the cross_property suggestion class.
+properties:
+  hotel-aurora:
+    name: "Hotel Aurora"
+
+# --- Which systems this agent actually uses through core/adapters ----------
+# The marketing signals themselves (ad performance, brand kit, reviews, local
+# events) come from data/imports/*.json via tools/ingest.py, not from here -
+# this is only about core/adapters (pms, email, messaging). This agent emails
+# the Monday exec report (email) and notifies staff of a ROAS drop
+# (messaging). It never calls the PMS - see docs/how-it-works.md "Design
+# decisions" #11 and the "What this agent actually uses" section of
+# docs/integrations.md - so pms is left out here on purpose:
+# systems.pms.adapter stays mock forever and must never trigger the
+# "SAMPLE DATA" warning. Listing email/messaging still warns you correctly if
+# THOSE are left on mock once you are running for real.
+systems_used: [email, messaging]
+
+# Ad-platform connector for budget writes. mock = fixtures, csv = appends to
+# data/exports/ad_budget_changes.csv for you to apply by hand, stub = not
+# configured. See docs/integrations.md.
+ads:
+  adapter: mock
+
+# Mirrors the source demo's `marketing_rules` table - six toggles the
+# suggestion queue, the budget optimizer and the two sub-agent engines all
+# read. Turning one off is the fastest way to see, and prove, exactly what
+# it does - see docs/how-it-works.md.
+rules:
+  brand_guard: true            # off-brand drafts are still produced, always labelled
+  budget_safety_cap: true      # off = 3x scale instead of 2x; step log says so in red
+  event_radar: true            # off mutes every event_signal suggestion (skipped, not shown)
+  library_photos_only: true    # structural in this repo - there is no image generation
+  always_name_property: true   # off = no eyebrow on generated creatives
+  variation_cap: true          # off = full variation run, uncapped at 12
+
+# The standing suggestion queue (tools/suggestion_engine.py).
+suggestions:
+  headline_min_age_days: 60     # a creative this old is worth a fresh headline test
+  review_min_mentions: 3        # a review theme needs this many mentions to earn an ad
+
+# The budget optimizer (tools/budget_engine.py) - thresholds ported from the
+# source engine unchanged. Nothing here ever auto-applies: every change waits
+# for a human, whatever autonomy elsewhere in this family means.
+budget:
+  pause_below_roas_capped: 1.0
+  pause_below_roas_uncapped: 1.5
+  pause_min_spend_30d: 900
+  scale_up_roas_min: 7.0
+  scale_up_daily_budget_max: 200
+  scale_factor_capped: 2
+  scale_factor_uncapped: 3
+  hold_roas_above: 20
+  # (loser, winner) pairs you have deliberately set up as A/B twins - same
+  # audience, same objective, different creative. Replace with your own; the
+  # source hard-coded one pair, this repo asks you to declare yours.
+  twin_pairs:
+    - [aurora-adults-pool, aurora-pool-evenings]
+  twin_roas_gap_min: 2.0
+  twin_shift_pct: 0.4
+
+# Both children are off by default - the suggestion queue and the budget
+# optimizer are fully useful without either. See docs/sub-agents.md.
+subagents:
+  content_creation:        # "The Editor"
+    enabled: false
+  brand_collateral:        # "The Art Director"
+    enabled: false
+  marketing_performance:   # "The Attributor"
+    enabled: false
+    roas_drop_alert_pct: 0.25    # week-over-week ROAS drop that raises an alert
+    exec_report_day: monday
+    exec_report_hour: 9
+
+# How often `tools/run.py --watch` re-runs, and what `make schedule` prints
+# by default. See scheduler/ for cron/launchd/systemd.
+schedule:
+  suggestions:
+    command: "tools/run.py --once"
+    cadence: "0 7 * * *"           # daily 07:00 - refresh the suggestion queue
+  budget:
+    command: "tools/run.py --once --budget"
+    cadence: "0 8 * * *"           # daily 08:00 - budget analysis
+  content_creation:
+    command: "tools/run.py --once --content"
+    cadence: "0 9 * * 1"           # weekly Monday 09:00 - only if enabled
+  brand_collateral:
+    command: "tools/run.py --once --design"
+    cadence: "*/30 * * * *"        # every 30 min - only if enabled
+  marketing_performance:
+    command: "tools/run.py --once --performance"
+    cadence: "0 9 * * 1"           # Monday 09:00 - only if enabled

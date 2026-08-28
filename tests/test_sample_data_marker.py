@@ -50,12 +50,29 @@ def _sample_item(tmp_path):
 
 def test_a_real_pass_on_the_mock_default_tags_its_item_sample(tmp_path):
     store, item = _sample_item(tmp_path)
-    # ...but the PMS this agent never reads is excluded by systems_used, so an
-    # item sourced from it is NOT sample data just because pms.adapter is mock.
+    # While a system this agent USES (email) is still on the mock adapter,
+    # every item the run produces is sample-derived - whatever its source.
     pms_item = store.upsert_item("pms", "res-1", kind="suggestion", payload={"title": "x"})
     store.close()
     assert item.is_sample is True
     assert item.payload.get("_sample") is True
+    assert pms_item.is_sample is True
+
+
+def test_unused_mock_pms_does_not_tag_once_used_systems_are_connected(tmp_path, monkeypatch):
+    """`systems_used: [email, messaging]` excludes the PMS: with email and
+    messaging on real adapters, a mock PMS must not mark items as sample."""
+    cfg = tmp_path / "cfg"; cfg.mkdir()
+    (cfg / "hotel.yaml").write_text(
+        "systems:\n  email:\n    adapter: imap\n  messaging:\n    adapter: webhook\n",
+        encoding="utf-8")
+    (cfg / "agent.yaml").write_text("systems_used: [email, messaging]\n", encoding="utf-8")
+    monkeypatch.setenv("AGENT_CONFIG_DIR", str(cfg))
+    settings = load_settings()
+    assert settings.systems.pms.adapter == "mock"
+    store = Store(settings, path=tmp_path / "t2.db")
+    pms_item = store.upsert_item("pms", "res-2", kind="suggestion", payload={"title": "y"})
+    store.close()
     assert pms_item.is_sample is False
 
 
